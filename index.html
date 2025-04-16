@@ -43,14 +43,17 @@
 
   <h2>State School Funding Plan Comparison Tool for Ohio Districts</h2>
   <div id="description">Select a district to compare funding plans over time.</div>
+  <div id="description">This chart shows inflation adjusted net funding from the State of Ohio.</div>
+  <div id="description">It does not include local property tax revenue, income tax revenue, or federal funding.</div>
   <select id="districtSelect">
     <option disabled selected>Select a District</option>
   </select>
   <canvas id="fundingChart"></canvas>
   <div id="description" style="text-align: center; font-size: 16px; margin-top: 20px;">
     <p id="mainText"> Data Sources: Ohio Department of Education and Workforce, Policy Matters Ohio, Ohio River Valley Institute.</p>
-    <p id="extraText">All numbers are in 2024 dollars</p>
-    <p id="extraText">FY27 estimates are based on Policy Matters Analysis of Ohio Legislative Service Commission data and represent the cumulative funding change over the 2 year period.</p>
+    <p id="extraText">All values are in real FY25 dollars.</p>
+    <p id="extraText">FY27 estimates are based on Policy Matters Analysis of Ohio Legislative Service Commission data.</p>
+    <p id="extraText">These represent the cumulative funding change over the 2 year period.</p>
   </div>
 
   <script>
