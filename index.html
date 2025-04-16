@@ -1,111 +1,145 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Ohio School Disrict Real Funding</title>
+  <meta charset="UTF-8">
+  <title>District Funding Comparison</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <style>
     body {
+      background-color: #e0e0e0;
+      font-family: Arial, sans-serif;
       margin: 0;
-      font-family: 'Arial', sans-serif;
+      padding: 20px;
     }
-  
     h2 {
       text-align: center;
-      padding: 10px;
     }
-  
+    select {
+      display: block;
+      margin: 20px auto;
+      padding: 10px;
+      font-size: 16px;
+    }
     canvas {
-    width: 80%;
-    max-width: 800px;
-    display: block;
-    margin: 0 auto;
-  }
+      display: block;
+      margin: 0 auto;
+      width: 80%;
+      max-width: 900px;
+      background-color: #ffffff;
+    }
+    #description {
+      text-align: center;
+      font-size: 16px;
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
   <div style="text-align: center; padding: 20px;">
     <img src="ORVIlogo.png" alt="Organization Logo" style="height: 60px; vertical-align: middle; margin-right: 10px;">
-    <span style="font-size: 24px; font-weight: bold;">Ohio School District State Funding, Inflation Adjusted</span>
+    <span style="font-size: 24px; font-weight: bold;"></span>
   </div>
 
-  <select id="dataSelect" style="display: block; margin: 0 auto;"></select>
-  <canvas id="myChart" style="background-color: #f9f6f6;"></canvas>
-  <canvas id="myChart" width="400"></canvas>
-  <p style="text-align: center; font-size: 14px; margin-top: 20px;">
-    Data Sources: Ohio Department of Education and Workforce, Ohio River Valley Institute Analysis
-  </p>
+  <h2>State School Funding Plan Comparison Tool for Ohio Districts</h2>
+  <div id="description">Select a district to compare funding plans over time.</div>
+  <select id="districtSelect">
+    <option disabled selected>Select a District</option>
+  </select>
+  <canvas id="fundingChart"></canvas>
+  <div id="description" style="text-align: center; font-size: 16px; margin-top: 20px;">
+    <p id="mainText"> Data Sources: Ohio Department of Education and Workforce, Policy Matters Ohio, Ohio River Valley Institute.</p>
+    <p id="extraText">All numbers are in 2024 dollars</p>
+    <p id="extraText">FY27 estimates are based on Policy Matters Analysis of Ohio Legislative Service Commission data and represent the cumulative funding change over the 2 year period.</p>
+  </div>
 
   <script>
     let chart;
-    let parsedData = {};
+    let allData = [];
 
-    function createChart(labels, data) {
-      const ctx = document.getElementById('myChart').getContext('2d');
-      chart = new Chart(ctx, {
+    Papa.parse("State Funding 2021-2025 Ohio Local SDs - Sheet8.csv", {
+      download: true,
+      header: true,
+      complete: function(results) {
+        allData = results.data.filter(row => row.District); // remove empty rows
+
+        // Get unique districts
+        const districts = [...new Set(allData.map(row => row.District))].sort();
+
+        const dropdown = document.getElementById("districtSelect");
+        districts.forEach(d => {
+          const option = document.createElement("option");
+          option.value = d;
+          option.textContent = d;
+          dropdown.appendChild(option);
+        });
+
+        dropdown.addEventListener("change", () => {
+          const district = dropdown.value;
+          updateChart(district);
+        });
+      }
+    });
+
+    function updateChart(district) {
+      const districtData = allData.filter(row => row.District === district);
+      const years = ["FY21", "FY22", "FY23", "FY24", "FY25", "FY27"];
+
+      const datasets = districtData.map((plan, idx) => {
+        return {
+          label: plan["Funding Plan"] || `Plan ${idx + 1}`,
+          data: years.map(year => parseFloat(plan[year]) || 0),
+          borderColor: idx === 0 ? "blue" : "red",
+          backgroundColor: idx === 0 ? "rgba(0, 0, 255, 0.1)" : "rgba(0, 128, 0, 0.1)",
+          tension: 0.3
+        };
+      });
+
+      const labels = years;
+
+      if (chart) chart.destroy();
+
+      chart = new Chart(document.getElementById("fundingChart").getContext("2d"), {
         type: 'line',
         data: {
           labels: labels,
-          datasets: [{
-            label: 'Real Net State Funding',
-            data: data,
-            borderColor: 'blue',
-            tension: 0.1
-          }]
+          datasets: datasets
         },
         options: {
-  scales: {
-    y: {
-      ticks: {
-        callback: function(value) {
-          return '$' + value;
-        }
-      },
-      title: {
+    responsive: true,
+    plugins: {
+      legend: {
         display: true,
-        text: 'Value'
+        position: 'top'
+      },
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            let label = context.dataset.label || '';
+            if (label) label += ': ';
+            if (context.parsed.y !== null) {
+              label += '$' + context.parsed.y.toLocaleString();
+            }
+            return label;
+          }
+        }
       }
-    }
-  }
-}
+    },
+          responsive: true,
+          plugins: {
+            legend: { position: 'top' },
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: value => "$" + value.toLocaleString()
+              }
+            }
+          }
+        }
       });
     }
-
-    function updateChart(data) {
-      chart.data.datasets[0].data = data;
-      chart.update();
-    }
-
-    function loadCSV() {
-      fetch('data.csv')
-        .then(response => response.text())
-        .then(csv => {
-          const result = Papa.parse(csv, { header: true });
-          const labels = Object.keys(result.data[0]).slice(1);
-
-          result.data.forEach(row => {
-            if (row.District) {
-              parsedData[row.District] = labels.map(label => parseFloat(row[label]));
-            }
-          });
-
-          const dropdown = document.getElementById('dataSelect');
-          Object.keys(parsedData).forEach(District => {
-            const option = document.createElement('option');
-            option.value = District;
-            option.textContent = District;
-            dropdown.appendChild(option);
-          });
-
-          createChart(labels, parsedData[dropdown.value]);
-
-          dropdown.addEventListener('change', function () {
-            updateChart(parsedData[this.value]);
-          });
-        });
-    }
-
-    loadCSV();
   </script>
 </body>
 </html>
